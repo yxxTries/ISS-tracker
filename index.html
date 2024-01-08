@@ -19,15 +19,14 @@
             <ul>
                 <li><a href="#" onclick="focusOn()">Focus on ISS</a></li>
                 <li><a href="#" onclick="line()">Toggle Distance</a></li>
-                <li><a href="#">TBD</a></li>
-                <li><a href="#">About this project</a></li>
+                <!-- <li><a href="#">TBD</a></li> -->
+                <!-- <li><a href="#">About this project</a></li> -->
             </ul>
         </nav>
     </div>
 </div>
 <!-- ----MAP---- -->
 <div id="map"> </div>
-
 
 </body>
 </html>
@@ -74,6 +73,10 @@ const interval = setInterval(function() {
             issMarker = L.marker([iss_lat, iss_lng], {icon: issIcon}).addTo(map);
             issCircle = L.circle([iss_lat, iss_lng], {radius: 1000}).addTo(map);
 
+            //distance between iss and user 
+            distanceBetweenBoth = ("Distance between you and ISS: " + 
+                DistanceBetweenUserAndIss(lat, lng, iss_lat, iss_lng) + " KM");
+
         })
     .catch(error => console.log)
 }, 500)
@@ -85,33 +88,38 @@ function focusOn() {
 
 // getting user data -------
 
-let marker, circle;
+let marker, circle, lat, lng;
 
 navigator.geolocation.watchPosition(success, error);
 
 function success(pos){
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+    lat = pos.coords.latitude;
+    lng = pos.coords.longitude;
     const accuracy = pos.coords.accuracy;
 
     if (marker){
         map.removeLayer(marker);
         map.removeLayer(circle);
     }
-    marker = L.marker([lat, lng]).addTo(map);
+    marker = L.marker([lat, lng], { opacity: 1 }).addTo(map);
+    marker.bindTooltip("Your Location", {permanent: true, className: "user-Label", offset: [0, -30] });
     circle = L.circle([lat, lng], {radius: accuracy}).addTo(map);
     
 }
 
 // draw line between iss and user
-let polyline, state, intervalLine;
+let polyline, state, intervalLine, distMarker;
 function line(){
     // check if an intervals already been setup
     if (intervalLine){
         clearInterval(intervalLine);
         intervalLine = null;
         map.removeLayer(polyline);
+        map.removeLayer(distMarker);
         return;
+    }
+    else {
+        distMarker = L.marker([lat, lng], { opacity: 0 }).addTo(map);;
     }
     //interval for line 
 
@@ -123,13 +131,31 @@ function line(){
         map.removeLayer(polyline);
     }
     polyline = L.polyline(latlngs, {color: 'black'}).addTo(map);
-    }, 50) 
-    map.fitBounds(polyline.getBounds());
+
+    // displaying Distance between user and ISS
+    distMarker.bindTooltip(String(distanceBetweenBoth), {permanent: true, className: "my-label", offset: [0, 0] });
+    }, 50)  
 }
 
-    
+// Distance between user and ISS
 
+function DistanceBetweenUserAndIss(lat1,lon1,lat2,lon2) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d.toFixed(3);
+}
 
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
 
 // ask user to turn on geoaccess
 function error(err){
